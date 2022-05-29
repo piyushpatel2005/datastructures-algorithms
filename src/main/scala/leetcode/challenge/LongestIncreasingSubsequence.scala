@@ -44,7 +44,7 @@ object LongestIncreasingSubsequence extends App {
 
    */
   def findLIS(s: Array[Int]) = {
-
+    // TODO: finish this implementation
   }
 
   findLIS(Array(1, 4, 5, 2, 6)) // List(1,2,4,5,6)

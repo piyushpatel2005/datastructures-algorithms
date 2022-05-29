@@ -1,4 +1,4 @@
-package leetcode.challenge;
+package leetcode.challenge.recursion;
 
 /**
  * LeetCode 258: Add Digits

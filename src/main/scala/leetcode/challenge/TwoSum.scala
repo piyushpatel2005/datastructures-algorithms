@@ -36,6 +36,7 @@ Follow-up: Can you come up with an algorithm that is less than O(n2) time comple
  */
 object TwoSum {
   def twoSum(nums: Array[Int], target: Int) = {
+    // TODO: pending implementation
     nums.sliding(2).foreach(println)
   }
 

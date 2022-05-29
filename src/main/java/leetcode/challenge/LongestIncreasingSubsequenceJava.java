@@ -31,28 +31,21 @@ package leetcode.challenge;
  */
 public class LongestIncreasingSubsequenceJava {
     public static void main(String[] args) {
-        Solution sol = new Solution();
         int[] arr = {10, 9, 2, 5, 3, 7, 101, 18};
-        sol.lengthOfLIS(arr); // 4
+        lengthOfLIS(arr); // 4
 
         int[] arr2 = {0, 1, 0, 3, 2, 3};
-        sol.lengthOfLIS(arr2); // 4
+        lengthOfLIS(arr2); // 4
 
         int[] arr3 = {7, 7, 7, 7, 7};
-        sol.lengthOfLIS(arr3); // 1
+        lengthOfLIS(arr3); // 1
     }
 
-
-}
-
-class Solution {
-    public int lengthOfLIS(int[] nums) {
+    public static int lengthOfLIS(int[] nums) {
         int size = nums.length;
-        int[] incrasingSubsequence = new int[size];
+        int[] increasingSubsequence = new int[size];
         return 0;
     }
 
-    public int findLIS(int lastElement, int[] nums) {
-        return 0;
-    }
+
 }
