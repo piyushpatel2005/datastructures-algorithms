@@ -3,6 +3,7 @@ package leetcode.lessons.arrays;
 import java.util.Arrays;
 
 /**
+ * Leetcode Problem 1572: Matrix Diagonal Sum
  * Given a 2D array, calculate the sum of diagonal elements.
  */
 public class SumOfDiagonalElementsJava {
