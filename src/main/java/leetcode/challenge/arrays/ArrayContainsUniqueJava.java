@@ -1,4 +1,4 @@
-package leetcode.lessons.arrays;
+package leetcode.challenge.arrays;
 
 /**
  * Write a program to check if an array contains same element twice or it has unique elements.

@@ -1,4 +1,4 @@
-package leetcode.lessons.arrays;
+package leetcode.challenge.arrays;
 
 /**
  * Leetcode Arrays Lessons

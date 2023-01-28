@@ -1,4 +1,4 @@
-package leetcode.lessons.arrays;
+package leetcode.challenge.arrays;
 
 import java.util.Arrays;
 /**

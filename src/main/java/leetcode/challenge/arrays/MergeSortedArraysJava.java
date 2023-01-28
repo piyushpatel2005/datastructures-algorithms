@@ -1,6 +1,4 @@
-package leetcode.lessons.arrays;
-
-import com.sun.scenario.effect.Merge;
+package leetcode.challenge.arrays;
 
 import java.util.Arrays;
 

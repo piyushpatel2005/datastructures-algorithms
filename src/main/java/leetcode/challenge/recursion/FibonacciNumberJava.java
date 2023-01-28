@@ -21,4 +21,12 @@ public class FibonacciNumberJava {
         if (n == 0 || n == 1) return n;
         return fib(n-1) + fib(n-2);
     }
+
+    public static int fib2(int n, int[] cache) {
+        if (n <= 0) return 0;
+        else if (n == 1) return 1;
+        else if (cache[n] > 0) return cache[n];
+        cache[n] = fib2(n - 1, cache) + fib2(n - 2, cache);
+        return cache[n];
+    }
 }

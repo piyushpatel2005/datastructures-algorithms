@@ -1,4 +1,4 @@
-package leetcode.lessons.arrays;
+package leetcode.challenge.arrays;
 
 /**
  * Given two arrays, write a function to check if they are permutation of each other.
