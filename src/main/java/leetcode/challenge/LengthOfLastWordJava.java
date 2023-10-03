@@ -1,6 +1,5 @@
-package hackerrank.problems;
+package leetcode.challenge;
 
-import com.sun.scenario.animation.shared.ClipEnvelope;
 
 /*
 Leetcode Problem 58: Length of Last Word

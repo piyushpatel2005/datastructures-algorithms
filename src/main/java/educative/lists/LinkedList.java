@@ -1,8 +1,6 @@
 package educative.lists;
 
 
-import sun.awt.image.ImageWatched;
-
 import java.util.ArrayList;
 import java.util.Random;
 

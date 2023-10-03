@@ -1376,3 +1376,453 @@ ORDER BY employee_id;
 
 ## Problem 1795: Rearrange Products Table
 
+Table: `Products`
+
+| Column Name | Type    |
+|:------------|:--------|
+| product_id  | int     |
+| store1      | int     |
+| store2      | int     |
+| store3      | int     |
+
+`product_id` is the primary key for this table.
+Each row in this table indicates the product's price in 3 different stores: store1, store2, and store3.
+If the product is not available in a store, the price will be `null` in that store's column.
+Write an SQL query to rearrange the Products table so that each row has (`product_id`, `store`, `price`). If a product is not available in a store, do not include a row with that `product_id` and `store` combination in the result table.
+
+Return the result table in any order.
+
+The query result format is in the following example.
+
+### Example 1:
+
+```
+        1
+       / \
+      2   3
+    /  \
+   4    6
+```
+
+**Input:**
+
+`Products` table:
+
+| product_id | store1 | store2 | store3  |
+|:-----------|:-------|:-------|:--------|
+| 0          | 95     | 100    | 105     |
+| 1          | 70     | null   | 80      |
+
+**Output:**
+
+| product_id | store  | price |
+|:-----------|:-------+|:------|
+| 0          | store1 | 95    |
+| 0          | store2 | 100   |
+| 0          | store3 | 105   |
+| 1          | store1 | 70    |
+| 1          | store3 | 80    |
+
+**Explanation:**
+
+Product 0 is available in all three stores with prices 95, 100, and 105 respectively.
+Product 1 is available in store1 with price 70 and store3 with price 80. The product is not available in store2.
+
+```sql
+SELECT product_id, 'store1' AS store, store1 AS price 
+    FROM products
+    WHERE store1 IS NOT NULL
+UNION
+SELECT product_id, 'store2' AS store, store2 AS price 
+    FROM products
+    WHERE store2 IS NOT NULL
+UNION
+SELECT product_id, 'store3' AS store, store3 AS price
+    FROM products
+    WHERE store3 IS NOT NULL;
+```
+
+## Problem 608: Tree Node
+
+Table: `Tree`
+
+| Column Name | Type |
+|:------------|:-----|
+| id          | int  |
+| p_id        | int  |
+
+`id` is the primary key column for this table.
+Each row of this table contains information about the `id` of a node and the `id` of its parent node in a tree.
+The given structure is always a valid tree.
+Each node in the tree can be one of three types:
+
+“Leaf”: if the node is a leaf node.
+“Root”: if the node is the root of the tree.
+“Inner”: If the node is neither a leaf node nor a root node.
+
+Write a SQL query to report the type of each node in the tree.
+
+Return the result table ordered by id in ascending order.
+The query result format is in the following example.
+
+### Example 1:
+**Input:**
+
+Tree table:
+
+| id | p_id |
+|:---|:-----|
+| 1  | null |
+| 2  | 1    |
+| 3  | 1    |
+| 4  | 2    |
+| 5  | 2    |
+
+Output:
+
+| id | type   |
+|:---|:-------|
+| 1 | Root   |
+| 2 | Inner  |
+| 3 | Leaf   |
+| 4 | Leaf   |
+| 5 | Leaf   |
+
+**Explanation:**
+
+Node 1 is the root node because its parent node is `null` and it has child nodes 2 and 3.
+Node 2 is an inner node because it has parent node 1 and child node 4 and 5.
+Nodes 3, 4, and 5 are leaf nodes because they have parent nodes and they do not have child nodes.
+
+### Example 2:
+**Input:**
+
+Tree table:
+
+| id | p_id |
+|:---|:-----|
+| 1  | null |
+
+**Output:**
+
+| id | type  |
+|:---|:------|
+| 1  | Root  |
+
+**Explanation:** If there is only one node on the tree, you only need to output its root attributes.
+
+```sql
+SELECT id, 
+    CASE WHEN p_id IS NULL THEN 'Root'
+    WHEN id IN (SELECT p_id FROM tree) THEN 'Inner'
+    ELSE 'Leaf'
+    END AS type
+    FROM tree
+```
+
+## Problem 1683: Invalid Tweets
+
+Table: `Tweets`
+
+| Column Name    | Type     |
+|:---------------|:---------|
+| tweet_id       | int      |
+| content        | varchar  |
+
+`tweet_id` is the primary key for this table.
+This table contains all the tweets in a social media app.
+Write a SQL query to find the IDs of the invalid tweets. The tweet is invalid if the number of characters used in the 
+content of the tweet is strictly greater than 15.
+
+Return the result table in any order.
+The query result format is in the following example.
+
+### Example 1:
+
+**Input:**
+
+Tweets table:
+
+| tweet_id | content                          |
+|:---------|:---------------------------------|
+| 1        | Vote for Biden                   |
+| 2        | Let us make America great again! |
+
+**Output:**
+
+| tweet_id |
+|:---------|
+| 2        |
+
+**Explanation:**
+
+Tweet 1 has length = 14. It is a valid tweet.
+Tweet 2 has length = 32. It is an invalid tweet.
+
+```sql
+SELECT tweet_id FROM
+    tweets WHERE LENGTH(content) > 15;
+```
+
+## Problem 176: Second Highest Salary
+
+Table: `Employee`
+
+| Column Name | Type  |
+|:------------|:------|
+| id          | int   |
+| salary      | int   |
+
+`id` is the primary key column for this table.
+Each row of this table contains information about the salary of an employee.
+Write a SQL query to report the second highest salary from the Employee table. 
+If there is no second highest salary, the query should report `null`.
+
+The query result format is in the following example.
+
+### Example 1:
+
+**Input:**
+
+Employee table:
+
+| id | salary  |
+|:---|:--------|
+| 1  | 100     |
+| 2  | 200     |
+| 3  | 300     |
+
+**Output:**
+
+| SecondHighestSalary |
+|:---------------------|
+| 200                 |
+
+### Example 2:
+
+**Input:**
+
+Employee table:
+
+| id | salary |
+|:---|:-------|
+| 1  | 100    |
+
+Output:
+
+| SecondHighestSalary |
+|:---------------------|
+| null                |
+
+```sql
+SELECT IFNULL(
+        (SELECT DISTINCT(Salary) FROM Employee
+            ORDER BY Salary DESC
+            LIMIT 1
+            OFFSET 1),
+        NULL
+    ) SecondHighestSalary;
+```
+
+## Problem 197: Rising Temperature
+
+Table: `Weather`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| id            | int     |
+| recordDate    | date    |
+| temperature   | int     |
+
+`id` is the primary key for this table.
+This table contains information about the temperature on a certain day.
+Write a SQL query to find all dates’ `Id` with higher temperatures compared to its previous dates (yesterday).
+
+Return the result table in any order.
+The query result format is in the following example.
+
+### Example 1:
+
+**Input:**
+
+Weather table:
+
+| id | recordDate | temperature |
+|:---|:-----------|:------------|
+| 1  | 2015-01-01 | 10          |
+| 2  | 2015-01-02 | 25          |
+| 3  | 2015-01-03 | 20          |
+| 4  | 2015-01-04 | 30          |
+
+**Output:**
+
+| id |
+|----|
+| 2  |
+| 4  |
+
+**Explanation:**
+
+In 2015-01-02, the temperature was higher than the previous day (10 -> 25).
+In 2015-01-04, the temperature was higher than the previous day (20 -> 30).
+
+```sql
+SELECT
+    Weather.id AS 'Id'
+FROM Weather
+JOIN Weather w
+    ON DATEDIFF(Weather.RecordDate, w.RecordDate) = 1
+    AND Weather.Temperature > w.Temperature;
+
+SELECT w2.id
+    FROM Weather w1, Weather w2
+    WHERE w2.temperature > w1.temperature 
+        AND DATEDIFF(w2.recordDate, w1.recordDate) = 1;
+
+SElECT w1.id
+FROM Weather w1, Weather w2
+WHERE w1.Temperature > w2.Temperature
+    AND TO_DAYS(w1.RecordDate) - TO_DAYS(w2.RecordDate) = 1 
+```
+
+## Problem 1378: Replace Employee ID with The Unique Identifier
+
+Table: `Employees`
+
+| Column Name   | Type     |
+|:--------------|:---------|
+| id            | int      |
+| name          | varchar  |
+
+- `id` is the primary key (column with unique values) for this table.
+Each row of this table contains the `id` and the `name` of an employee in a company.
+
+Table: EmployeeUNI
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| id            | int     |
+| unique_id     | int     |
+
+(`id`, `unique_id`) is the primary key (combination of columns with unique values) for this table.
+Each row of this table contains the id and the corresponding unique id of an employee in the company.
+
+Write a solution to show the unique ID of each user, If a user does not have a unique ID replace just show `null`.
+
+Return the result table in any order.
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+Employees table:
+
+| id | name     |
+|:---|:---------|
+| 1  | Alice    |
+| 7  | Bob      |
+| 11 | Meir     |
+| 90 | Winston  |
+| 3  | Jonathan |
+
+EmployeeUNI table:
+
+| id | unique_id |
+|:---|:----------|
+| 3  | 1         |
+| 11 | 2         |
+| 90 | 3         |
+
+**Output:**
+
+| unique_id | name      |
+|:----------|:----------|
+| null      | Alice     |
+| null      | Bob       |
+| 2         | Meir      |
+| 3         | Winston   |
+| 1         | Jonathan  |
+
+**Explanation:**
+Alice and Bob do not have a unique ID, We will show `null` instead.
+The unique ID of Meir is 2.
+The unique ID of Winston is 3.
+The unique ID of Jonathan is 1.
+
+```sql
+SELECT b.unique_id, a.name FROM Employees a
+    LEFT JOIN
+    EmployeeUNI b
+    ON a.id = b.id;
+```
+
+## Problem 1068: Product Sales Analyais |
+
+Table: `Sales`
+
+| Column Name | Type  |
+|:------------|:------|
+| sale_id     | int   |
+| product_id  | int   |
+| year        | int   |
+| quantity    | int   |
+| price       | int   |
+
+(`sale_id`, `year`) is the primary key (combination of columns with unique values) of this table.
+`product_id` is a foreign key (reference column) to Product table.
+Each row of this table shows a sale on the product product_id in a certain year.
+Note that the `price` is per unit.
+
+Table: Product
+
+| Column Name  | Type     |
+|:-------------|:---------|
+| product_id   | int      |
+| product_name | varchar  |
+
+`product_id` is the primary key (column with unique values) of this table.
+Each row of this table indicates the product name of each product.
+
+Write a solution to report the `product_name`, `year`, and `price` for each `sale_id` in the Sales table.
+
+Return the resulting table in any order.
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+Sales table:
+
+| sale_id | product_id | year | quantity | price  |
+|:--------|:-----------|:-----|:---------|:-------|
+| 1       | 100        | 2008 | 10       | 5000   |
+| 2       | 100        | 2009 | 12       | 5000   |
+| 7       | 200        | 2011 | 15       | 9000   |
+
+Product table:
+
+| product_id | product_name |
+|:-----------|:-------------|
+| 100        | Nokia        |
+| 200        | Apple        |
+| 300        | Samsung      |
+
+**Output:**
+
+| product_name | year  | price |
+|:-------------|:------+-------|
+| Nokia        | 2008  | 5000  |
+| Nokia        | 2009  | 5000  |
+| Apple        | 2011  | 9000  |
+
+**Explanation:**
+From sale_id = 1, we can conclude that Nokia was sold for 5000 in the year 2008.
+From sale_id = 2, we can conclude that Nokia was sold for 5000 in the year 2009.
+From sale_id = 7, we can conclude that Apple was sold for 9000 in the year 2011.
+
+```sql
+SELECT product_name, year, price FROM Sales
+    INNER JOIN
+    Product ON Sales.product_id = Product.product_id
+    ORDER BY year ASC;
+```
