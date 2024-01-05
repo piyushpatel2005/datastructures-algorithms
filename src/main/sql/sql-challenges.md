@@ -1215,6 +1215,409 @@ ON Employee.id = cte.managerId
 WHERE cte.count >=5;
 ```
 
+## Problem 571. Find Median Given Frequency of Numbers
+
+Table: `Numbers`
+
+| Column Name | Type |
+|:------------|:-----|
+| num         | int  |
+| frequency   | int  |
+
+`num` is the primary key (column with unique values) for this table.
+Each row of this table shows the frequency of a number in the database. The median is the value separating the higher half from the lower half of a data sample.
+
+Write a solution to report the median of all the numbers in the database after decompressing the `Numbers` table. Round the median to one decimal point.
+The result format is in the following example.
+
+### Example 1:
+
+**Input:** `Numbers` table:
+
+| num | frequency  |
+|:----|:-----------|
+| 0   | 7          |
+| 1   | 1          |
+| 2   | 3          |
+| 3   | 1          |
+
+**Output:**
+
+| median |
+|:-------|
+| 0.0    |
+
+**Explanation:**
+If we decompress the Numbers table, we will get `[0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3]`, so the median is `(0 + 0) / 2 = 0`.
+
+```sql
+WITH cte AS (
+    SELECT num, frequency, 
+        SUM(frequency) OVER (ORDER BY num) running_sum,
+        (SUM(frequency) OVER ()) / 2 AS 'median_num'
+        FROM Numbers
+    ) 
+    SELECT AVG(num) AS median FROM cte
+    WHERE median_num BETWEEN (running_sum - frequency) AND running_sum;
+``` 
+
+## Problem 574: Winning Candidate
+
+Table: `Candidate`
+
+| Column Name | Type     |
+|:------------|:---------|
+| id          | int      |
+| name        | varchar  |
+
+`id` is the column with unique values for this table.
+Each row of this table contains information about the `id` and the `name` of a candidate.
+
+Table: `Vote`
+
+| Column Name | Type  |
+|:------------|:------|
+| id          | int   |
+| candidateId | int   |
+
+`id` is an auto-increment primary key (column with unique values).
+`candidateId` is a foreign key (reference column) to `id` from the `Candidate` table.
+Each row of this table determines the candidate who got the ith vote in the elections.
+
+Write a solution to report the `name` of the winning candidate (i.e., the candidate who got the largest number of votes).
+
+The test cases are generated so that exactly one candidate wins the elections.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Candidate` table:
+
+| id | name  |
+|:---|:------|
+| 1  | A     |
+| 2  | B     |
+| 3  | C     |
+| 4  | D     |
+| 5  | E     |
+
+`Vote` table:
+
+| id | candidateId |
+|----|:------------|
+| 1  | 2           |
+| 2  | 4           |
+| 3  | 3           |
+| 4  | 2           |
+| 5  | 5           |
+
+**Output:**
+
+| name |
+|:-----|
+| B    |
+
+**Explanation:**
+Candidate B has 2 votes. Candidates C, D, and E have 1 vote each.
+The winner is candidate B.
+
+```sql
+SELECT name FROM (
+    SELECT name, COUNT(1) votes FROM Candidate
+    JOIN Vote
+    ON Candidate.id = Vote.candidateId
+    GROUP BY name ORDER BY votes DESC LIMIT 1
+) tmp;
+```
+
+## Problem 577. Employee Bonus
+
+Table: `Employee`
+
+| Column Name | Type     |
+|:------------|:---------|
+| empId       | int      |
+| name        | varchar  |
+| supervisor  | int      |
+| salary      | int      |
+
+`empId` is the column with unique values for this table.
+Each row of this table indicates the `name` and the ID of an employee in addition to their `salary` and the id of their manager.
+
+Table: `Bonus`
+
+| Column Name | Type  |
+|:------------|:------|
+| empId       | int   |
+| bonus       | int   |
+
+`empId` is the column of unique values for this table.
+`empId` is a foreign key (reference column) to `empId` from the `Employee` table.
+Each row of this table contains the id of an employee and their respective `bonus`.
+
+Write a solution to report the `name` and `bonus` amount of each employee with a `bonus` less than 1000.
+Return the result table in any order. The result format is in the following example.
+
+### Example 1:
+
+**Input:** `Employee` table:
+
+| empId | name    | supervisor | salary |
+|:------|:--------|:-----------|:-------|
+| 3     | Brad    | null       | 4000   |
+| 1     | John    | 3          | 1000   |
+| 2     | Dan     | 3          | 2000   |
+| 4     | Thomas  | 3          | 4000   |
+
+`Bonus` table:
+
+| empId | bonus  |
+|:------|:-------|
+| 2     | 500    |
+| 4     | 2000   |
+
+**Output:**
+
+| name | bonus  |
+|:-----|:-------|
+| Brad | null   |
+| John | null   |
+| Dan  | 500    |
+
+```sql
+SELECT e.name, b.bonus FROM  Employee e 
+LEFT OUTER JOIN Bonus b
+ON e.empId = b.empId
+WHERE b.bonus < 1000 OR b.bonus IS NULL;
+```
+
+## Problem 578. Get Highest Answer Rate Question
+
+Table: `SurveyLog`
+
+| Column Name | Type  |
+|:------------|:------|
+| id          | int   |
+| action      | ENUM  |
+| question_id | int   |
+| answer_id   | int   |
+| q_num       | int   |
+| timestamp   | int   |
+
+This table may contain duplicate rows.
+`action` is an ENUM (category) of the type: "show", "answer", or "skip".
+Each row of this table indicates the user with ID = id has taken an action with the question `question_id` at time timestamp.
+If the action taken by the user is "answer", `answer_id` will contain the id of that answer, otherwise, it will be `null`.
+`q_num` is the numeral order of the question in the current session.
+
+The answer rate for a question is the number of times a user answered the question by the number of times a user showed the question.
+
+Write a solution to report the question that has the highest answer rate. If multiple questions have the same maximum answer rate, report the question with the smallest `question_id`.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`SurveyLog` table:
+
+| id | action | question_id | answer_id | q_num | timestamp |
+|:---|:-------|:------------|:----------|:------|:----------|
+| 5  | show   | 285         | null      | 1     | 123       |
+| 5  | answer | 285         | 124124    | 1     | 124       |
+| 5  | show   | 369         | null      | 2     | 125       |
+| 5  | skip   | 369         | null      | 2     | 126       |
+
+**Output:**
+
+| survey_log |
+|:-----------|
+| 285        |
+
+**Explanation:**
+Question 285 was showed 1 time and answered 1 time. The answer rate of question 285 is 1.0
+Question 369 was showed 1 time and was not answered. The answer rate of question 369 is 0.0
+Question 285 has the highest answer rate.
+
+```sql
+SELECT question_id AS survey_log
+FROM SurveyLog
+GROUP BY question_id
+ORDER BY (
+    COUNT(answer_id) / COUNT(CASE WHEN action = 'show' THEN question_id ELSE NULL END)) DESC, question_id ASC
+LIMIT 1;
+```
+
+## Problem 579. Find Cumulative Salary of an Employee
+
+Table: `Employee`
+
+| Column Name | Type  |
+|:------------|:------|
+| id          | int   |
+| month       | int   |
+| salary      | int   |
+
+(`id`, `month`) is the primary key (combination of columns with unique values) for this table.
+Each row in the table indicates the salary of an employee in one month during the year 2020.
+
+Write a solution to calculate the cumulative salary summary for every employee in a single unified table.
+
+The cumulative salary summary for an employee can be calculated as follows:
+
+    For each month that the employee worked, sum up the salaries in that month and the previous two months. This is their 3-month sum for that month. If an employee did not work for the company in previous months, their effective salary for those months is 0.
+    Do not include the 3-month sum for the most recent month that the employee worked for in the summary.
+    Do not include the 3-month sum for any month the employee did not work.
+
+Return the result table ordered by `id` in ascending order. In case of a tie, order it by `month` in descending order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:** `Employee` table:
+
+| id | month | salary |
+|:---|:------|:-------|
+| 1  | 1     | 20     |
+| 2  | 1     | 20     |
+| 1  | 2     | 30     |
+| 2  | 2     | 30     |
+| 3  | 2     | 40     |
+| 1  | 3     | 40     |
+| 3  | 3     | 60     |
+| 1  | 4     | 60     |
+| 3  | 4     | 70     |
+| 1  | 7     | 90     |
+| 1  | 8     | 90     |
+
+**Output:**
+
+| id | month | Salary  |
+|:---|:------|:--------|
+| 1  | 7     | 90      |
+| 1  | 4     | 130     |
+| 1  | 3     | 90      |
+| 1  | 2     | 50      |
+| 1  | 1     | 20      |
+| 2  | 1     | 20      |
+| 3  | 3     | 100     |
+| 3  | 2     | 40      |
+
+**Explanation:**
+Employee '1' has five salary records excluding their most recent month '8':
+- 90 for month '7'.
+- 60 for month '4'.
+- 40 for month '3'.
+- 30 for month '2'.
+- 20 for month '1'.
+  So the cumulative `salary` summary for this employee is:
+
+  | id | month | salary  |
+  |:---|:------|:--------|
+  | 1  | 7     | 90      |  (90 + 0 + 0)
+  | 1  | 4     | 130     |  (60 + 40 + 30)
+  | 1  | 3     | 90      |  (40 + 30 + 20)
+  | 1  | 2     | 50      |  (30 + 20 + 0)
+  | 1  | 1     | 20      |  (20 + 0 + 0)
+  
+  Note that the 3-month sum for month '7' is 90 because they did not work during month '6' or month '5'.
+
+Employee '2' only has one salary record (month '1') excluding their most recent month '2'.
+
+| id | month  | salary |
+|:---|:-------|:-------|
+| 2  | 1      | 20     |  (20 + 0 + 0)
+
+Employee '3' has two salary records excluding their most recent month '4':
+- 60 for month '3'.
+- 40 for month '2'.
+  So the cumulative salary summary for this employee is:
+
+  | id | month | salary |
+  |:---|:------|:-------|
+  | 3  | 3     | 100    |  (60 + 40 + 0)
+  | 3  | 2     | 40     |  (40 + 0 + 0)
+  
+```sql
+SELECT 
+    id,
+    month,
+    SUM(salary) OVER (PARTITION BY id ORDER BY month RANGE BETWEEN 2 PRECEDING AND CURRENT ROW) AS Salary
+FROM Employee
+WHERE (id, month) NOT IN (SELECT id, MAX(month) AS month FROM Employee GROUP BY id)
+ORDER BY id, month DESC;
+```
+
+## Problem 580: Count Student Number in Departments
+
+Table: `Student`
+
+| Column Name  | Type     |
+|:-------------|:---------|
+| student_id   | int      |
+| student_name | varchar  |
+| gender       | varchar  |
+| dept_id      | int      |
+
+`student_id` is the primary key (column with unique values) for this table.
+`dept_id` is a foreign key (reference column) to `dept_id` in the `Department` tables.
+Each row of this table indicates the name of a student, their gender, and the id of their department.
+
+Table: `Department`
+
+| Column Name | Type     |
+|:------------|:---------|
+| dept_id     | int      |
+| dept_name   | varchar  |
+
+`dept_id` is the primary key (column with unique values) for this table.
+Each row of this table contains the id and the name of a department.
+
+Write a solution to report the respective department name and number of students majoring in each department for all departments in the `Department` table (even ones with no current students).
+
+Return the result table ordered by `student_number` in descending order. In case of a tie, order them by `dept_name` alphabetically.
+The result format is in the following example.
+
+### Example 1
+**Input:**
+
+`Student` table:
+
+| student_id | student_name  | gender | dept_id |
+|:-----------|:--------------|:-------|:--------|
+| 1          | Jack          | M      | 1       |
+| 2          | Jane          | F      | 1       |
+| 3          | Mark          | M      | 2       |
+
+`Department` table:
+
+| dept_id | dept_name   |
+|:--------|:------------|
+| 1       | Engineering |
+| 2       | Science     |
+| 3       | Law         |
+
+**Output:**
+
+| dept_name   | student_number  |
+|:------------|:----------------|
+| Engineering | 2               |
+| Science     | 1               |
+| Law         | 0               |
+
+```sql
+WITH tmp AS (
+SELECT dept_name, student_id FROM Student s
+RIGHT OUTER JOIN
+Department d ON s.dept_id = d.dept_id
+) SELECT dept_name, COUNT(student_id) student_number 
+FROM tmp GROUP BY dept_name 
+ORDER BY student_number DESC, dept_name ASC;
+```
+
 ## Problem 584: Find Customer Referee
 
 Table: `Customer`
@@ -1222,12 +1625,11 @@ Table: `Customer`
 | Column Name | Type    |
 |:------------|:--------|
 | id          | int     |
-| name        | varchar |
+| name        | varchar |  
 | referee_id  | int     |
 
 `id` is the primary key column for this table.
 Each row of this table indicates the id of a customer, their name, and the id of the customer who referred them.
-
 
 Write an SQL query to report the IDs of the customer that are not referred by the customer with id = 2.
 
@@ -1260,6 +1662,70 @@ Customer table:
 
 ```sql
 SELECT name FROM Customer WHERE referee_id IS NULL OR referee_id != 2;
+```
+
+## Problem 585: Investments in 2016
+
+Table: `Insurance`
+
+| Column Name | Type   |
+|:------------|:-------|
+| pid         | int    |
+| tiv_2015    | float  |
+| tiv_2016    | float  |
+| lat         | float  |
+| lon         | float  |
+
+`pid` is the primary key (column with unique values) for this table.
+Each row of this table contains information about one policy where:
+`pid` is the policyholder's policy ID.
+`tiv_2015` is the total investment value in 2015 and `tiv_2016` is the total investment value in 2016.
+`lat` is the latitude of the policy holder's city. It's guaranteed that lat is not `NULL`.
+`lon` is the longitude of the policy holder's city. It's guaranteed that lon is not `NULL`.
+
+Write a solution to report the sum of all total investment values in 2016 `tiv_2016`, for all policyholders who:
+
+- have the same `tiv_2015` value as one or more other policyholders, and
+- are not located in the same city as any other policyholder (i.e., the (`lat`, `lon`) attribute pairs must be unique).
+
+Round `tiv_2016` to two decimal places.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Insurance` table:
+
+| pid | tiv_2015  | tiv_2016 | lat | lon |
+|:----|:----------|:---------|:----|:----|
+| 1   | 10        | 5        | 10  | 10  |
+| 2   | 20        | 20       | 20  | 20  |
+| 3   | 10        | 30       | 20  | 20  |
+| 4   | 10        | 40       | 40  | 40  |
+
+**Output:**
+
+| tiv_2016 |
+|:---------|
+| 45.00    |
+
+**Explanation:**
+
+The first record in the table, like the last record, meets both of the two criteria.
+The `tiv_2015` value 10 is the same as the third and fourth records, and its location is unique.
+
+The second record does not meet any of the two criteria. Its `tiv_2015` is not like any other policyholders and its location is the same as the third record, which makes the third record fail, too.
+So, the result is the sum of `tiv_2016` of the first and last record, which is 45.
+
+```sql
+WITH tmp AS (
+    SELECT *,
+    COUNT(*) OVER (PARTITION BY tiv_2015) as tiv_2015_count,
+    COUNT(*) OVER (PARTITION BY lat, lon) AS location_count
+    FROM Insurance
+) SELECT ROUND(SUM(tiv_2016), 2) AS tiv_2016 FROM tmp 
+WHERE tiv_2015_count > 1 AND location_count = 1;
 ```
 
 ## Problem 586: Customers Placing The Largest Number Of Orders
@@ -1349,17 +1815,153 @@ World table:
 | Andorra     | Europe    | 468     | 78115      | 3712000000   |
 | Angola      | Africa    | 1246700 | 20609294   | 100990000000 |
 
-** Output: **
+**Output:**
 
 | name        | population | area    |
 |:------------|:-----------|:--------|
 | Afghanistan | 25500100   | 652230  |
 | Algeria     | 37100000   | 2381741 |
 
-
-
 ```sql
 SELECT name, population, area FROM World WHERE area >= 3000000 OR population >= 25000000;
+```
+
+## Problem 596: Classes More Than 5 Students
+
+Table: `Courses`
+
+| Column Name | Type     |
+|:------------|:---------|
+| student     | varchar  |
+| class       | varchar  |
+
+(`student`, `class`) is the primary key (combination of columns with unique values) for this table.
+Each row of this table indicates the name of a student and the class in which they are enrolled.
+
+Write a solution to find all the classes that have at least five students.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Courses` table:
+
+| student | class     |
+|:--------|:----------|
+| A       | Math      |
+| B       | English   |
+| C       | Math      |
+| D       | Biology   |
+| E       | Math      |
+| F       | Computer  |
+| G       | Math      |
+| H       | Math      |
+| I       | Math      |
+
+**Output:**
+
+| class   |
+|:--------|
+| Math    |
+
+**Explanation:**
+
+- Math has 6 students, so we include it.
+- English has 1 student, so we do not include it.
+- Biology has 1 student, so we do not include it.
+- Computer has 1 student, so we do not include it.
+
+```sql
+WITH tmp AS (
+    SELECT class, count(1) AS count FROM Courses GROUP BY class 
+) SELECT class FROM tmp WHERE count >= 5;
+
+SELECT class FROM Courses GROUP BY class HAVING Count(1) >= 5;
+```
+
+## Problem 597: Friend Requests I: Overall Acceptance Rate
+
+Table: `FriendRequest`
+
+| Column Name    | Type    |
+|:---------------|:--------|
+| sender_id      | int     |
+| send_to_id     | int     |
+| request_date   | date    |
+
+This table may contain duplicates (In other words, there is no primary key for this table in SQL).
+This table contains the ID of the user who sent the request, the ID of the user who received the request, and the date of the request.
+
+Table: `RequestAccepted`
+
+| Column Name    | Type    |
+|:---------------|:--------|
+| requester_id   | int     |
+| accepter_id    | int     |
+| accept_date    | date    |
+
+This table may contain duplicates (In other words, there is no primary key for this table in SQL).
+This table contains the ID of the user who sent the request, the ID of the user who received the request, and the date when the request was accepted.
+
+Find the overall acceptance rate of requests, which is the number of acceptance divided by the number of requests. Return the answer rounded to 2 decimals places.
+
+**Note:**
+
+- The accepted requests are not necessarily from the table `friend_request`. In this case, Count the total accepted requests (no matter whether they are in the original requests), and divide it by the number of requests to get the acceptance rate.
+- It is possible that a sender sends multiple requests to the same receiver, and a request could be accepted more than once. In this case, the ‘duplicated’ requests or acceptances are only counted once.
+- If there are no requests at all, you should return 0.00 as the accept_rate.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`FriendRequest` table:
+
+| sender_id | send_to_id  | request_date |
+|:----------|:------------|:-------------|
+| 1         | 2           | 2016/06/01   |
+| 1         | 3           | 2016/06/01   |
+| 1         | 4           | 2016/06/01   |
+| 2         | 3           | 2016/06/02   |
+| 3         | 4           | 2016/06/09   |
+
+`RequestAccepted` table:
+
+| requester_id | accepter_id  | accept_date |
+|:-------------|:-------------|:------------|
+| 1            | 2            | 2016/06/03  |
+| 1            | 3            | 2016/06/08  |
+| 2            | 3            | 2016/06/08  |
+| 3            | 4            | 2016/06/09  |
+| 3            | 4            | 2016/06/10  |
+
+**Output:**
+
+| accept_rate |
+|:------------|
+| 0.8         |
+
+**Explanation:**
+There are 4 unique accepted requests, and there are 5 requests in total. So the rate is 0.80.
+
+**Follow up:**
+
+- Could you find the acceptance rate for every month? 
+- Could you find the cumulative acceptance rate for every day?
+
+```sql
+SELECT ROUND(IFNULL(
+    (SELECT COUNT(1) FROM (
+        SELECT DISTINCT requester_id, accepter_id FROM RequestAccepted
+    ) AS A)
+    /
+    (SELECT COUNT(1) FROM (
+        SELECT DISTINCT sender_id, send_to_id FROM FriendRequest
+    ) AS B), 0), 2) AS accept_rate;
 ```
 
 ## Problem 607: Sales Person
@@ -1402,8 +2004,6 @@ Table: `Orders`
 `com_id` is a foreign key to `com_id` from the Company table.
 `sales_id` is a foreign key to `sales_id` from the SalesPerson table.
 Each row of this table contains information about one order. This includes the ID of the company, the ID of the salesperson, the date of the order, and the amount paid.
-
-
 
 Write an SQL query to report the names of all the salespersons who did not have any orders related to the company with the name "RED".
 
