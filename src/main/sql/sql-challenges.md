@@ -1964,6 +1964,183 @@ SELECT ROUND(IFNULL(
     ) AS B), 0), 2) AS accept_rate;
 ```
 
+## Problem 601: Human Traffic of Stadium
+
+Table: `Stadium`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| id            | int     |
+| visit_date    | date    |
+| people        | int     |
+
+`visit_date` is the column with unique values for this table.
+Each row of this table contains the visit date and visit id to the stadium with the number of people during the visit.
+As the `id` increases, the date increases as well.
+
+Write a solution to display the records with three or more rows with consecutive id's, and the number of people is greater than or equal to `100` for each.
+Return the result table ordered by `visit_date` in ascending order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Stadium` table:
+
+| id   | visit_date | people    |
+|:-----|:-----------|:----------|
+| 1    | 2017-01-01 | 10        |
+| 2    | 2017-01-02 | 109       |
+| 3    | 2017-01-03 | 150       |
+| 4    | 2017-01-04 | 99        |
+| 5    | 2017-01-05 | 145       |
+| 6    | 2017-01-06 | 1455      |
+| 7    | 2017-01-07 | 199       |
+| 8    | 2017-01-09 | 188       |
+
+**Output:**
+
+| id   | visit_date | people    |
+|:-----|:-----------|:----------|
+| 5    | 2017-01-05 | 145       |
+| 6    | 2017-01-06 | 1455      |
+| 7    | 2017-01-07 | 199       |
+| 8    | 2017-01-09 | 188       |
+
+**Explanation:**
+The four rows with ids 5, 6, 7, and 8 have consecutive ids and each of them has >= 100 people attended. Note that row 8 was included even though the `visit_date` was not the next day after row 7.
+The rows with ids 2 and 3 are not included because we need at least three consecutive ids.
+
+```sql
+WITH cte AS (
+    SELECT *,
+        LEAD(id, 1) OVER (ORDER BY id) AS next_id,
+        LEAD(id, 2) OVER (ORDER BY id) AS second_id,
+        LAG(id, 1) OVER (ORDER BY id) AS previous_id,
+        LAG(id, 2) OVER (ORDER BY id) AS second_last_id
+    FROM Stadium
+    WHERE people >= 100
+) SELECT id, visit_date, people FROM cte
+    WHERE ((next_id - id = 1 AND id - previous_id = 1)
+    OR (second_id - next_id = 1 AND next_id - id = 1)
+    OR (id - previous_id = 1 AND previous_id - second_last_id = 1))
+    ORDER BY visit_date;
+```
+
+## Problem 602: Friend Requests II: Who has Most Friends
+
+Table: `RequestAccepted`
+
+| Column Name    | Type    |
+|:---------------|:--------|
+| requester_id   | int     |
+| accepter_id    | int     |
+| accept_date    | date    |
+
+(`requester_id`, `accepter_id`) is the primary key (combination of columns with unique values) for this table.
+This table contains the ID of the user who sent the request, the ID of the user who received the request, and the date when the request was accepted.
+
+Write a solution to find the people who have the most friends and the most friends number.
+The test cases are generated so that only one person has the most friends.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`RequestAccepted` table:
+
+| requester_id | accepter_id | accept_date  |
+|:-------------|:------------|:-------------|
+| 1            | 2           | 2016/06/03   |
+| 1            | 3           | 2016/06/08   |
+| 2            | 3           | 2016/06/08   |
+| 3            | 4           | 2016/06/09   |
+
+**Output:**
+
+| id | num |
+|:---|:----|
+| 3  | 3   |
+
+**Explanation:**
+The person with id 3 is a friend of people 1, 2, and 4, so he has three friends in total, which is the most number than any others.
+
+**Follow up:** In the real world, multiple people could have the same most number of friends. Could you find all these 
+people in this case?
+
+```sql
+WITH all_users AS (
+    SELECT requester_id AS id FROM RequestAccepted
+    UNION ALL
+    SELECT accepter_id AS id FROM RequestAccepted
+) SELECT id, num FROM
+    (SELECT id, COUNT(id) AS num,
+    RANK() OVER (ORDER BY COUNT(id) DESC) AS rnk
+    FROM all_users
+    GROUP BY id
+    ) tmp
+    WHERE rnk = 1;
+```
+
+## Problem 603: Consecutive Available Seats
+
+Table: `Cinema`
+
+| Column Name | Type  |
+|:------------|:------|
+| seat_id     | int   |
+| free        | bool  |
+
+`seat_id` is an auto-increment column for this table.
+Each row of this table indicates whether the `i`th seat is free or not. `1` means free while `0` means occupied.
+
+Find all the consecutive available seats in the cinema.
+
+Return the result table ordered by seat_id in ascending order.
+The test cases are generated so that more than two seats are consecutively available.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Cinema` table:
+
+| seat_id | free  |
+|:--------|:------|
+| 1       | 1     |
+| 2       | 0     |
+| 3       | 1     |
+| 4       | 1     |
+| 5       | 1     |
+
+**Output:**
+
+| seat_id |
+|:--------|
+| 3       |
+| 4       |
+| 5       |
+
+```sql
+WITH tmp AS (
+    SELECT seat_id, 
+    LAG(free) OVER (ORDER BY seat_id) AS previous, 
+    LEAD(free) OVER (ORDER BY seat_id) AS next, 
+    free FROM
+    Cinema
+) SELECT seat_id FROM tmp
+ WHERE (previous = 1 AND free) OR (next = 1 AND free);
+ 
+-- Using Self join
+SELECT DISTINCT a.seat_id FROM
+Cinema a JOIN Cinema b
+ON (a.seat_id - b.seat_id) IN (-1, 1) AND a.free = TRUE AND b.free = TRUE
+ORDER BY a.seat_id;
+```
+
 ## Problem 607: Sales Person
 
 Table:  SalesPerson
@@ -2136,6 +2313,144 @@ SELECT id,
     ELSE 'Leaf'
     END AS type
     FROM tree
+```
+
+## Problem 610: Triangle Judgement
+
+Table: `Triangle`
+
+| Column Name | Type  |
+|:------------|:------|
+| x           | int   |
+| y           | int   |
+| z           | int   |
+
+In SQL, `(x, y, z)` is the primary key column for this table.
+Each row of this table contains the lengths of three line segments.
+
+Report for every three line segments whether they can form a triangle.
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Triangle` table:
+
+| x  | y  | z  |
+|:---|:---|:---|
+| 13 | 15 | 30 |
+| 10 | 20 | 15 |
+
+**Output:**
+
+| x  | y  | z   | triangle |
+|:---|:---|:----|:---------|
+| 13 | 15 | 30  | No       |
+| 10 | 20 | 15  | Yes      |
+
+For three sides to be able to create a triangle, the sum of any two sides must be greater than the third side of the 
+triangle. That is `x + y > z` condition must be satisfied for each sides.
+That is, it should hold true all three conditions below.
+
+```
+x + y > z
+y + z > x
+z + x > y
+```
+
+```sql
+SELECT x, y, z,
+CASE WHEN (x + y > z) AND (y + z > x) AND (z + x > y) THEN 'Yes'
+ELSE 'No' END AS triangle
+FROM Triangle;
+```
+
+## Problem 612: Shortest Distance in a Plane
+
+Table: `Point2D`
+
+| Column Name | Type  |
+|:------------|:------|
+| x           | int   |
+| y           | int   |
+
+`(x, y)` is the primary key column (combination of columns with unique values) for this table.
+Each row of this table indicates the position of a point on the X-Y plane.
+
+The distance between two points `p1(x1, y1)` and `p2(x2, y2)` is `sqrt((x2 - x1)2 + (y2 - y1)2)`.
+
+Write a solution to report the shortest distance between any two points from the `Point2D` table. Round the distance to two decimal points.
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Point2D` table:
+
+| x  | y   |
+|:---|:----|
+| -1 | -1  |
+| 0  | 0   |
+| -1 | -2  |
+
+**Output:**
+
+| shortest |
+|:---------|
+| 1.00     |
+
+**Explanation:** The shortest distance is 1.00 from point (-1, -1) to (-1, 2).
+
+```sql
+SELECT 
+ROUND(MIN(SQRT((POW(p1.x - p2.x, 2) + POW(p1.y - p2.y, 2)))), 2) AS shortest 
+FROM Point2D p1
+JOIN Point2D p2
+ON p1.x != p2.x OR p1.y != p2.y;
+```
+
+## Problem 613: Shortest Distance in a Line
+
+Table: `Point`
+
+| Column Name | Type |
+|:------------|:-----|
+| x           | int  |
+
+In SQL, `x` is the primary key column for this table.
+Each row of this table indicates the position of a point on the X-axis.
+
+Find the shortest distance between any two points from the `Point` table.
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Point` table:
+
+| x  |
+|:---|
+| -1 |
+| 0  |
+| 2  |
+
+**Output:**
+
+| shortest |
+|:---------|
+| 1        |
+
+**Explanation:** The shortest distance is between points -1 and 0 which is |(-1) - 0| = 1.
+
+**Follow up:** How could you optimize your solution if the Point table is ordered in ascending order?
+
+```sql
+SELECT MIN(ABS(p1.x - p2.x)) AS shortest
+FROM Point p1
+JOIN Point p2
+ON p1.x != p2.x;
 ```
 
 ## Problem 627: Swap Salary
