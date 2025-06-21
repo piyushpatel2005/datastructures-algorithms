@@ -308,11 +308,21 @@ The result format is in the following example.
 | 200        | 2011       | 15       | 9000  |
 
 ```sql
-SELECT t.product_id, first_year, quantity, price FROM (
-    SELECT product_id, MIN(year) first_year FROM Sales
-        GROUP BY product_id
-) t JOIN Sales s
-    ON t.product_id = s.product_id AND t.first_year = s.year;
+SELECT product_id, year AS first_year, quantity, price
+    FROM Sales
+    WHERE (product_id, year) IN (
+        SELECT product_id, MIN(year) year
+            FROM Sales
+            GROUP BY product_id
+    );
+    
+WITH product_partitions AS (
+    SELECT product_id, year AS first_year, quantity, price,
+        DENSE_RANK() OVER (PARTITION BY product_id ORDER BY year) row_num
+        FROM Sales
+) SELECT product_id, first_year, quantity, price
+    FROM product_partitions
+    WHERE row_num = 1;
 ```
 
 ## Problem 1075: Project Employees I
@@ -740,7 +750,7 @@ SELECT DISTINCT p.product_id, p.product_name FROM Product p
     HAVING MIN(sale_date) >= '2019-01-01' AND MAX(sale_date) <= '2019-03-31';
 ```
 
-In this case, we need only products which were sold in the first quartner and not any other quarter. So, simple 
+In this case, we need only products which were sold in the first quarter and not any other quarter. So, simple 
 `WHERE` clause may not work here.
 
 ## Problem 1097: Game Play Analysis V
@@ -814,7 +824,7 @@ consec_login_info AS (SELECT
       WHEN A.player_id IS NULL THEN 0
       ELSE 1
     END) AS logged_in_consecutively,
-    F.first_login
+    F.first_login_date
   FROM
     first_logins F
     LEFT JOIN Activity A ON F.player_id = A.player_id
@@ -1821,6 +1831,1081 @@ SELECT DISTINCT p.product_id,
     FROM Products p 
     LEFT JOIN cte2
     ON p.product_id = cte2.product_id
+```
+
+## Problem 1173: Immediate Food Delivery I
+
+Table: `Delivery`
+
+| Column Name                 | Type    |
+|:----------------------------|:--------|
+| delivery_id                 | int     |
+| customer_id                 | int     |
+| order_date                  | date    |
+| customer_pref_delivery_date | date    |
+
+`delivery_id` is the primary key (column with unique values) of this table.
+The table holds information about food delivery to customers that make orders at some date and specify a preferred delivery date (on the same order date or after it).
+
+If the customer's preferred delivery date is the same as the order date, then the order is called **immediate**; 
+otherwise,
+it 
+is called **scheduled**.
+
+Write a solution to find the percentage of immediate orders in the table, **rounded to 2 decimal places**.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Delivery` table:
+
+| delivery_id | customer_id | order_date | customer_pref_delivery_date |
+|:------------|:------------|:-----------|:----------------------------|
+| 1           | 1           | 2019-08-01 | 2019-08-02                  |
+| 2           | 5           | 2019-08-02 | 2019-08-02                  |
+| 3           | 1           | 2019-08-11 | 2019-08-11                  |
+| 4           | 3           | 2019-08-24 | 2019-08-26                  |
+| 5           | 4           | 2019-08-21 | 2019-08-22                  |
+| 6           | 2           | 2019-08-11 | 2019-08-13                  |
+
+**Output:**
+
+| immediate_percentage |
+|:---------------------|
+| 33.33                |
+
+**Explanation:** The orders with delivery id 2 and 3 are immediate while the others are scheduled.
+
+```sql
+SELECT ROUND(SUM(CASE WHEN order_date = customer_pref_delivery_date THEN 1 ELSE 0 END) /
+    COUNT(1) * 100, 2) AS immediate_percentage 
+    FROM Delivery;
+```
+
+## Probblem 1174: Immediate Food Delivery II
+
+Table: `Delivery`
+
+| Column Name                 | Type    |
+|:----------------------------|:--------|
+| delivery_id                 | int     |
+| customer_id                 | int     |
+| order_date                  | date    |
+| customer_pref_delivery_date | date    |
+
+`delivery_id` is the primary key (column with unique values) of this table.
+The table holds information about food delivery to customers that make orders at some date and specify a preferred delivery date (on the same order date or after it).
+
+If the customer's preferred delivery date is the same as the order date, then the order is called **immediate**;
+otherwise,
+it
+is called **scheduled**.
+
+The **first order** of a customer is the order with the earliest order date that the customer made. It is guaranteed 
+that a customer has precisely one first order.
+
+Write a solution to find the percentage of immediate orders in the first orders of all customers, **rounded to 2 
+decimal places**.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Delivery` table:
+
+| delivery_id | customer_id | order_date | customer_pref_delivery_date |
+|:------------|:------------|:-----------|:----------------------------|
+| 1           | 1           | 2019-08-01 | 2019-08-02                  |
+| 2           | 2           | 2019-08-02 | 2019-08-02                  |
+| 3           | 1           | 2019-08-11 | 2019-08-12                  |
+| 4           | 3           | 2019-08-24 | 2019-08-24                  |
+| 5           | 3           | 2019-08-21 | 2019-08-22                  |
+| 6           | 2           | 2019-08-11 | 2019-08-13                  |
+| 7           | 4           | 2019-08-09 | 2019-08-09                  |
+
+**Output:**
+
+| immediate_percentage |
+|:---------------------|
+| 50.00                |
+
+**Explanation:**
+- The customer id 1 has a first order with delivery id 1 and it is scheduled.
+- The customer id 2 has a first order with delivery id 2 and it is immediate.
+- The customer id 3 has a first order with delivery id 5 and it is scheduled.
+- The customer id 4 has a first order with delivery id 7 and it is immediate.
+Hence, half the customers have immediate first orders.
+
+```sql
+SELECT ROUND(AVG(order_date = customer_pref_delivery_date) * 100, 2)  AS immediate_percentage
+FROM Delivery
+WHERE (customer_id, order_date) IN (
+  SELECT customer_id, MIN(order_date) AS order_date
+  FROM Delivery
+  GROUP BY customer_id
+);
+```
+
+```sql
+WITH cte AS (
+    SELECT order_date, customer_pref_delivery_date, ROW_NUMBER() OVER (PARTITION BY customer_id order by order_date) order_number FROM Delivery
+) SELECT ROUND(SUM(CASE WHEN order_date = customer_pref_delivery_date THEN 1 ELSE 0 END) /
+    COUNT(1) * 100, 2) immediate_percentage
+    FROM cte WHERE order_number = 1;
+```
+
+## Problem 1179: Reformat Department Table
+
+Table: `Department`
+
+| Column Name | Type    |
+|:------------|:--------|
+| id          | int     |
+| revenue     | int     |
+| month       | varchar |
+
+In SQL,(`id`, `month`) is the primary key of this table.
+The table has information about the revenue of each department per month.
+The month has values in ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].
+
+Reformat the table such that there is a department id column and a revenue column for each month.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Department` table:
+
+| id   | revenue | month |
+|:-----|:--------|:------|
+| 1    | 8000    | Jan   |
+| 2    | 9000    | Jan   |
+| 3    | 10000   | Feb   |
+| 1    | 7000    | Feb   |
+| 1    | 6000    | Mar   |
+
+**Output:**
+
+| id   | Jan_Revenue | Feb_Revenue | Mar_Revenue | ... | Dec_Revenue |
+|:-----|:------------|:------------|:------------|-----|:------------|
+| 1    | 8000        | 7000        | 6000        | ... | null        |
+| 2    | 9000        | null        | null        | ... | null        |
+| 3    | null        | 10000       | null        | ... | null        |
+
+**Explanation:** The revenue from Apr to Dec is `null`.
+Note that the result table has 13 columns (1 for the department id + 12 for the months).
+
+```sql
+SELECT id,
+    SUM( IF (month = 'Jan', revenue, null) ) AS Jan_Revenue,
+    SUM( IF (month = 'Feb', revenue, null) ) AS Feb_Revenue,
+    SUM( IF (month = 'Mar', revenue, null) ) AS Mar_Revenue,
+    SUM( IF (month = 'Apr', revenue, null) ) AS Apr_Revenue,
+    SUM( IF (month = 'May', revenue, null) ) AS May_Revenue,
+    SUM( IF (month = 'Jun', revenue, null) ) AS Jun_Revenue,
+    SUM( IF (month = 'Jul', revenue, null) ) AS Jul_Revenue,
+    SUM( IF (month = 'Aug', revenue, null) ) AS Aug_Revenue,
+    SUM( IF (month = 'Sep', revenue, null) ) AS Sep_Revenue,
+    SUM( IF (month = 'Oct', revenue, null) ) AS Oct_Revenue,
+    SUM( IF (month = 'Nov', revenue, null) ) AS Nov_Revenue,
+    SUM( IF (month = 'Dec', revenue, null) ) AS Dec_Revenue
+    FROM Department
+    GROUP By id;
+```
+
+## Problem 1193: Monthly Transactions I
+
+Table: `Transactions`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| id            | int     |
+| country       | varchar |
+| state         | enum    |
+| amount        | int     |
+| trans_date    | date    |
+
+`id` is the primary key of this table.
+The table has information about incoming transactions.
+The state column is an enum of type ["approved", "declined"].
+
+Write an SQL query to find for each month and country, the number of transactions and their total amount, the number of approved transactions and their total amount.
+
+Return the result table in any order.
+
+The query result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Transactions` table:
+
+| id   | country | state    | amount | trans_date |
+|:-----|:--------|:---------|:-------|:-----------|
+| 121  | US      | approved | 1000   | 2018-12-18 |
+| 122  | US      | declined | 2000   | 2018-12-19 |
+| 123  | US      | approved | 2000   | 2019-01-01 |
+| 124  | DE      | approved | 2000   | 2019-01-07 |
+
+**Output:**
+
+| month    | country | trans_count | approved_count | trans_total_amount | approved_total_amount |
+|:---------|:--------|:------------|:---------------|:-------------------|:----------------------|
+| 2018-12  | US      | 2           | 1              | 3000               | 1000                  |
+| 2019-01  | US      | 1           | 1              | 2000               | 2000                  |
+| 2019-01  | DE      | 1           | 1              | 2000               | 2000                  |
+
+```sql
+SELECT 
+    DATE_FORMAT(trans_date, "%Y-%m") AS month, 
+    country, 
+    COUNT(1) AS trans_count, 
+    SUM(IF(state = "approved", 1, 0)) AS approved_count, 
+    SUM(amount) AS trans_total_amount, 
+    SUM(IF(state = "approved", amount, 0 )) approved_total_amount 
+    FROM Transactions
+    GROUP BY DATE_FORMAT(trans_date, "%Y-%m"), country;
+```
+
+## Problem 1194: Tournament Winners
+
+Table: `Players`
+
+| Column Name | Type  |
+|:------------|:------|
+| player_id   | int   |
+| group_id    | int   |
+
+`player_id` is the primary key (column with unique values) of this table.
+Each row of this table indicates the group of each player.
+
+Table: `Matches`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| match_id      | int     |
+| first_player  | int     |
+| second_player | int     |
+| first_score   | int     |
+| second_score  | int     |
+
+`match_id` is the primary key (column with unique values) of this table.
+Each row is a record of a match, `first_player` and `second_player` contain the `player_id` of each match.
+`first_score` and `second_score` contain the number of points of the `first_player` and `second_player` respectively.
+You may assume that, in each match, players belong to the same group.
+
+The winner in each group is the player who scored the maximum total points within the group. In the case of a tie, the lowest `player_id` wins.
+
+Write a solution to find the winner in each group.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Players` table:
+
+| player_id | group_id   |
+|:----------|:-----------|
+| 15        | 1          |
+| 25        | 1          |
+| 30        | 1          |
+| 45        | 1          |
+| 10        | 2          |
+| 35        | 2          |
+| 50        | 2          |
+| 20        | 3          |
+| 40        | 3          |
+
+`Matches` table:
+
+| match_id   | first_player | second_player | first_score | second_score |
+|:-----------|:-------------|:--------------|:------------|:-------------|
+| 1          | 15           | 45            | 3           | 0            |
+| 2          | 30           | 25            | 1           | 2            |
+| 3          | 30           | 15            | 2           | 0            |
+| 4          | 40           | 20            | 5           | 2            |
+| 5          | 35           | 50            | 1           | 1            |
+
+**Output:**
+
+| group_id  | player_id  |
+|:----------|:-----------|
+| 1         | 15         |
+| 2         | 35         |
+| 3         | 40         |
+
+
+```sql
+WITH player_scores AS (
+  SELECT 
+    first_player AS player_id, 
+    first_score AS score 
+  FROM matches 
+  UNION ALL 
+  SELECT 
+    second_player AS player_id, 
+    second_score AS score 
+  FROM matches
+), 
+total_scores AS (
+  SELECT 
+    player_id, 
+    SUM(score) AS total_score 
+  FROM player_scores 
+  GROUP BY player_id
+)
+SELECT 
+  DISTINCT group_id, 
+  FIRST_VALUE(total_scores.player_id) OVER (
+    PARTITION BY group_id 
+    ORDER BY 
+      total_score DESC, 
+      total_scores.player_id
+  ) AS player_id
+FROM 
+  total_scores
+  LEFT JOIN players 
+  ON total_scores.player_id = players.player_id;
+```
+
+## Problem 1204: Last Person to Fit in the Bus
+
+Table: `Queue`
+
+| Column Name | Type    |
+|:------------|:--------|
+| person_id   | int     |
+| person_name | varchar |
+| weight      | int     |
+| turn        | int     |
+
+`person_id` column contains unique values.
+This table has the information about all people waiting for a bus.
+The `person_id` and turn columns will contain all numbers from `1` to `n,` where `n` is the number of rows in the table.
+`turn` determines the order of which the people will board the bus, where `turn=1` denotes the first person to board and `turn=n` denotes the last person to board.
+`weight` is the weight of the person in kilograms.
+
+There is a queue of people waiting to board a bus. However, the bus has a weight limit of 1000 kilograms, so there may be some people who cannot board.
+
+Write a solution to find the `person_name` of **the last person** that can fit on the bus without exceeding the weight 
+limit. The test cases are generated such that the first person does not exceed the weight limit.
+
+Note that only one person can board the bus at any given turn.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Queue` table:
+
+| person_id | person_name | weight | turn |
+|:----------|:------------|:-------|:-----|
+| 5         | Alice       | 250    | 1    |
+| 4         | Bob         | 175    | 5    |
+| 3         | Alex        | 350    | 2    |
+| 6         | John Cena   | 400    | 3    |
+| 1         | Winston     | 500    | 6    |
+| 2         | Marie       | 200    | 4    |
+
+**Output:**
+
+| person_name |
+|:------------|
+| John Cena   |
+
+**Explanation:** The folowing table is ordered by the turn for simplicity.
+
+| Turn | ID | Name      | Weight | Total Weight | Note |
+|:-----|:---|:----------|:-------|:-------------|:-----|
+| 1    | 5  | Alice     | 250    | 250          |      |
+| 2    | 3  | Alex      | 350    | 600          |      |
+| 3    | 6  | John Cena | 400    | 1000         | (last person to board) |
+| 4    | 2  | Marie     | 200    | 1200         | (cannot board) |
+| 5    | 4  | Bob       | 175    | ___          |      |
+| 6    | 1  | Winston   | 500    | ___          |      |
+
+```sql
+WITH cte AS (
+    SELECT person_name, 
+        SUM(weight) OVER (ORDER BY turn) 'total_weight'
+        FROM Queue
+) SELECt person_name
+    FROM cte
+    WHERE total_weight <=1000
+    ORDER BY total_weight DESC
+    LIMIT 1;
+```
+
+## Problem 1205: Monthly Transactions II
+
+Table: `Transactions`
+
+| Column Name    | Type    |
+|:---------------|:--------|
+| id             | int     |
+| country        | varchar |
+| state          | enum    |
+| amount         | int     |
+| trans_date     | date    |
+
+`id` is the column of unique values of this table.
+The table has information about incoming transactions.
+The state column is an ENUM (category) of type ["approved", "declined"].
+
+Table: `Chargebacks`
+
+| Column Name    | Type    |
+|:---------------|:--------|
+| trans_id       | int     |
+| trans_date     | date    |
+
+Chargebacks contains basic information regarding incoming chargebacks from some transactions placed in `Transactions` table.
+`trans_id` is a foreign key (reference column) to the `id` column of `Transactions` table.
+Each chargeback corresponds to a transaction made previously even if they were not approved.
+
+Write a solution to find for each month and country: the number of approved transactions and their total amount, the number of chargebacks, and their total amount.
+
+Note: In your solution, given the month and country, *ignore rows with all zeros*.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Transactions` table:
+
+| id  | country | state    | amount | trans_date |
+|:----|:--------|:---------|:-------|:-----------|
+| 101 | US      | approved | 1000   | 2019-05-18 |
+| 102 | US      | declined | 2000   | 2019-05-19 |
+| 103 | US      | approved | 3000   | 2019-06-10 |
+| 104 | US      | declined | 4000   | 2019-06-13 |
+| 105 | US      | approved | 5000   | 2019-06-15 |
+
+`Chargebacks` table:
+
+| trans_id | trans_date |
+|:---------|:-----------|
+| 102      | 2019-05-29 |
+| 101      | 2019-06-30 |
+| 105      | 2019-09-18 |
+
+**Output:**
+
+| month   | country | approved_count | approved_amount | chargeback_count | chargeback_amount |
+|:--------|:--------|:----------------|:----------------|:------------------|:------------------|
+| 2019-05 | US      | 1              | 1000            | 1                | 2000              |
+| 2019-06 | US      | 2              | 8000            | 1                | 1000              |
+| 2019-09 | US      | 0              | 0               | 1                | 5000              |
+
+```sql
+WITH approved_trans AS (
+    SELECT 
+        DATE_FORMAT(trans_date, '%Y-%m') AS month, country,
+        COUNT(id) AS approved_count,
+        SUM(amount) AS approved_amount
+        FROM Transactions t
+        WHERE t.state='approved'
+        GROUP BY 1, 2
+), chargebacks_trans AS (
+    SELECT DATE_FORMAT(c.trans_date, '%Y-%m') AS month, t.country,
+    COUNT(c.trans_id) AS chargeback_count,
+    SUM(t.amount) AS chargeback_amount
+    FROM Chargebacks c
+    JOIN Transactions t ON c.trans_id = t.id
+    GROUP BY 1, 2
+), unioned AS (
+    SELECT month, country, approved_count, approved_amount, 0 AS chargeback_count, 0 AS chargeback_amount
+        FROM approved_trans
+        UNION ALL
+        SELECT month, country, 0 AS approved_count, 0 AS approved_amount, chargeback_count, chargeback_amount
+        FROM chargebacks_trans
+) SELECt month, country,
+    SUM(approved_count) AS approved_count,
+    SUM(approved_amount) AS approved_amount,
+    SUM(chargeback_count) AS chargeback_count,
+    SUM(chargeback_amount) AS chargeback_amount
+    FROM unioned
+    GROUP BY 1, 2;
+```
+
+## Problem 1211: Queries Quality and Percentage
+
+Table: `Queries`
+
+| Column Name | Type    |
+|:------------|:--------|
+| query_name  | varchar |
+| result      | varchar |
+| position    | int     |
+| rating      | int     |
+
+This table may have duplicate rows.
+This table contains information collected from some queries on a database.
+The `position` column has a value from `1` to `500`.
+The `rating` column has a value from 1 to 5. Query with `rating` less than 3 is a poor query.
+
+We define query quality as:
+
+    The average of the ratio between query rating and its position.
+
+We also define poor query percentage as:
+
+    The percentage of all queries with rating less than 3.
+
+Write a solution to find each `query_name`, the `quality` and `poor_query_percentage`.
+
+Both `quality` and `poor_query_percentage` should be **rounded to 2 decimal places**.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Queries` table:
+
+| query_name | result            | position | rating |
+|:-----------|:------------------|:---------|:-------|
+| Dog        | Golden Retriever  | 1        | 5      |
+| Dog        | German Shepherd   | 2        | 5      |
+| Dog        | Mule              | 200      | 1      |
+| Cat        | Shirazi           | 5        | 2      |
+| Cat        | Siamese           | 3        | 3      |
+| Cat        | Sphynx            | 7        | 4      |
+
+**Output:**
+
+| query_name | quality | poor_query_percentage |
+|:-----------|:--------|:----------------------|
+| Dog        | 2.50    | 33.33                 |
+| Cat        | 0.66    | 33.33                 |
+
+**Explanation:**
+- Dog queries `quality` is `((5 / 1) + (5 / 2) + (1 / 200)) / 3 = 2.50`
+- Dog queries `poor_query_percentage` is `(1 / 3) * 100 = 33.33`
+- Cat queries `quality` equals `((2 / 5) + (3 / 3) + (4 / 7)) / 3 = 0.66`
+- Cat queries `poor_query_percentage` is `(1 / 3) * 100 = 33.33`
+
+```sql
+SELECT query_name,
+    ROUND(SUM(rating/position) / COUNT(1), 2) AS quality,
+    ROUND(SUM(CASE WHEN rating < 3 THEN 1 ELSE 0 END) / COUNT(1) * 100, 2) AS poor_query_percentage
+    FROM Queries
+    GROUP BY query_name
+```
+
+## Problem 1212: Team Scores in Football Tournament
+
+Table: `Teams`
+
+| Column Name   | Type     |
+|:--------------|:---------|
+| team_id       | int      |
+| team_name     | varchar  |
+
+`team_id` is the column with unique values of this table.
+Each row of this table represents a single football team.
+
+Table: `Matches`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| match_id      | int     |
+| host_team     | int     |
+| guest_team    | int     |
+| host_goals    | int     |
+| guest_goals   | int     |
+
+- `match_id` is the column of unique values of this table.
+- Each row is a record of a finished match between two different teams.
+- Teams `host_team` and `guest_team` are represented by their IDs in the Teams table (`team_id`), and they scored 
+  `host_goals` and `guest_goals` goals, respectively.
+
+You would like to compute the scores of all teams after all matches. Points are awarded as follows:
+
+- A team receives three points if they win a match (i.e., Scored more goals than the opponent team).
+- A team receives one point if they draw a match (i.e., Scored the same number of goals as the opponent team).
+- A team receives no points if they lose a match (i.e., Scored fewer goals than the opponent team).
+
+Write a solution that selects the `team_id`, `team_name` and `num_points` of each team in the tournament after all described matches.
+
+Return the result table ordered by `num_points` in **decreasing order**. In case of a tie, order the records by `team_id` 
+in increasing order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Teams` table:
+
+| team_id   | team_name    |
+|:----------|:-------------|
+| 10        | Leetcode FC  |
+| 20        | NewYork FC   |
+| 30        | Atlanta FC   |
+| 40        | Chicago FC   |
+| 50        | Toronto FC   |
+
+`Matches` table:
+
+| match_id   | host_team    | guest_team    | host_goals  | guest_goals  |
+|:-----------|:-------------|:--------------|:------------|:-------------|
+| 1          | 10           | 20            | 3           | 0            |
+| 2          | 30           | 10            | 2           | 2            |
+| 3          | 10           | 50            | 5           | 1            |
+| 4          | 20           | 30            | 1           | 0            |
+| 5          | 50           | 30            | 1           | 0            |
+
+**Output:**
+
+| team_id    | team_name    | num_points    |
+|:-----------|:-------------|:--------------|
+| 10         | Leetcode FC  | 7             |
+| 20         | NewYork FC   | 3             |
+| 50         | Toronto FC   | 3             |
+| 30         | Atlanta FC   | 1             |
+| 40         | Chicago FC   | 0             |
+
+```sql
+WITH host_points AS (
+    SELECT team_id AS team_id, team_name,
+    CASE WHEN host_goals > guest_goals THEN 3 
+            WHEN host_goals = guest_goals THEN 1
+            ELSE 0 END
+    AS num_points
+    FROM Teams t
+    LEFT JOIN Matches m
+    ON t.team_id = m.host_team
+), guest_points AS (
+    SELECT guest_team AS team_id, team_name,
+    CASE WHEN host_goals < guest_goals THEN 3
+        WHEN host_goals = guest_goals THEN 1
+        ELSE 0 END
+    AS num_points
+    FROM Teams t
+    JOIN Matches m
+    ON t.team_id = m.guest_team
+) SELECT team_id, team_name,
+    SUM(num_points) AS num_points
+    FROM (
+        SELECT team_id, team_name, num_points 
+            FROM host_points
+            UNION ALL
+            SELECT team_id, team_name, num_points
+                FROM guest_points
+    ) t
+    GROUP BY t.team_id
+    ORDER BY num_points DESC, team_id;
+```
+
+## Problem 1225: Report Contiguous Dates
+
+Table: `Failed`
+
+| Column Name  | Type    |
+|:-------------|:--------|
+| fail_date    | date    |
++--------------+---------+
+- `fail_date` is the primary key (column with unique values) for this table.
+This table contains the days of failed tasks.
+
+Table: `Succeeded`
+
+| Column Name  | Type    |
+|:-------------|:--------|
+| success_date | date    |
+
+- `success_date` is the primary key (column with unique values) for this table.
+This table contains the days of succeeded tasks.
+
+A system is running one task every day. Every task is independent of the previous tasks. The tasks can fail or succeed.
+
+Write a solution to report the `period_state` for each continuous interval of days in the period from `2019-01-01` to `2019-12-31`.
+
+`period_state` is 'failed' if tasks in this interval failed or 'succeeded' if tasks in this interval succeeded. Interval of days are retrieved as `start_date` and `end_date`.
+
+Return the result table ordered by `start_date`.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Failed` table:
+
+| fail_date         |
+|:------------------|
+| 2018-12-28        |
+| 2018-12-29        |
+| 2019-01-04        |
+| 2019-01-05        |
+
+`Succeeded` table:
+
+| success_date      |
+|:------------------|
+| 2018-12-30        |
+| 2018-12-31        |
+| 2019-01-01        |
+| 2019-01-02        |
+| 2019-01-03        |
+| 2019-01-06        |
+
+**Output:**
+
+| period_state | start_date   | end_date     |
+|:-------------|:-------------|:-------------|
+| succeeded    | 2019-01-01   | 2019-01-03   |
+| failed       | 2019-01-04   | 2019-01-05   |
+| succeeded    | 2019-01-06   | 2019-01-06   |
+
+**Explanation:**
+- The report ignored the system state in 2018 as we care about the system in the period 2019-01-01 to 2019-12-31.
+- From 2019-01-01 to 2019-01-03 all tasks succeeded and the system state was "succeeded".
+- From 2019-01-04 to 2019-01-05 all tasks failed and the system state was "failed".
+- From 2019-01-06 to 2019-01-06 all tasks succeeded and the system state was "succeeded".
+
+```sql
+WITH cte AS (
+    SELECT fail_date AS status_date, 'failed' AS status,  RANK() OVER (ORDER BY fail_date) AS ranking
+        FROM Failed
+        WHERE fail_date >= '2019-01-01' AND fail_date <= '2019-12-31'
+        UNION
+        SELECT success_date, 'succeeded' AS status, RANK() OVER (ORDER BY success_date) AS ranking
+        FROM Succeeded
+        WHERE success_date >= '2019-01-01' AND success_date <= '2019-12-31'
+), cte2 AS (SELECT status_date,
+    RANK() OVER (ORDER BY status_date) AS overall_ranking,
+    status,
+    ranking,
+    (RANK() OVER (ORDER BY status_date) - ranking) AS inverse_ranking
+    FROM cte
+) SELECT status AS period_state, 
+    MIN(status_date) AS start_date,
+    MAX(Status_date) AS end_date
+    FROM cte2
+    GROUP BY inverse_ranking, status
+    ORDER BY start_date;
+```
+
+## Problem 1241: Number of Comments per Post
+
+Table: `Submissions`
+
+| Column Name   | Type     |
+|:--------------|----------|
+| sub_id        | int      |
+| parent_id     | int      |
+
+This table may have duplicate rows.
+Each row can be a post or comment on the post.
+`parent_id` is null for posts.
+`parent_id` for comments is `sub_id` for another post in the table.
+
+Write a solution to find the number of comments per post. The result table should contain `post_id` and its corresponding `number_of_comments`.
+
+The `Submissions` table may contain duplicate comments. You should count the number of unique comments per post.
+
+The `Submissions` table may contain duplicate posts. You should treat them as one post.
+
+The result table should be ordered by `post_id` in ascending order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Submissions` table:
+
+| sub_id  | parent_id  |
+|:--------|:-----------|
+| 1       | Null       |
+| 2       | Null       |
+| 1       | Null       |
+| 12      | Null       |
+| 3       | 1          |
+| 5       | 2          |
+| 3       | 1          |
+| 4       | 1          |
+| 9       | 1          |
+| 10      | 2          |
+| 6       | 7          |
+
+**Output:**
+
+| post_id | number_of_comments |
+|:--------|:-------------------|
+| 1       | 3                  |
+| 2       | 2                  |
+| 12      | 0                  |
+
+**Explanation:**
+- The post with id 1 has three comments in the table with id 3, 4, and 9. The comment with id 3 is repeated in the 
+table, we counted it only once.
+- The post with id 2 has two comments in the table with id 5 and 10.
+- The post with id 12 has no comments in the table.
+- The comment with id 6 is a comment on a deleted post with id 7 so we ignored it.
+
+```sql
+WITH posts AS (
+    SELECT DISTINCT sub_id  FROM Submissions WHERE parent_id is NULL
+) 
+SELECT p.sub_id AS post_id, COUNT(DISTINCT c.sub_id) AS number_of_comments
+    FROM posts p
+    LEFT  JOIN Submissions c
+    ON p.sub_id = c.parent_id
+    GROUP BY p.sub_id
+    ORDER BY p.sub_id;
+```
+
+## Problem 1251: Average Selling Price
+
+Table: `Prices`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| product_id    | int     |
+| start_date    | date    |
+| end_date      | date    |
+| price         | int     |
+
+- (`product_id`, `start_date`, `end_date`) is the primary key (combination of columns with unique values) for this table.
+- Each row of this table indicates the price of the `product_id` in the period from `start_date` to `end_date`.
+- For each `product_id` there will be no two overlapping periods. That means there will be no two intersecting periods 
+  for the same `product_id`.
+
+Table: `UnitsSold`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| product_id    | int     |
+| purchase_date | date    |
+| units         | int     |
+
+This table may contain duplicate rows.
+Each row of this table indicates the date, units, and `product_id` of each product sold.
+
+Write a solution to find the average selling price for each product. `average_price` should be rounded to 2 decimal places. If a product does not have any sold units, its average selling price is assumed to be 0.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Prices` table:
+
+| product_id | start_date | end_date   | price  |
+|:-----------|:-----------|:-----------|--------|
+| 1          | 2019-02-17 | 2019-02-28 | 5      |
+| 1          | 2019-03-01 | 2019-03-22 | 20     |
+| 2          | 2019-02-01 | 2019-02-20 | 15     |
+| 2          | 2019-02-21 | 2019-03-31 | 30     |
+
+`UnitsSold` table:
+
+| product_id | purchase_date | units |
+|:-----------|:--------------|-------|
+| 1          | 2019-02-25    | 100   |
+| 1          | 2019-03-01    | 15    |
+| 2          | 2019-02-10    | 200   |
+| 2          | 2019-03-22    | 30    |
+
+**Output:**
+
+| product_id | average_price |
+|:-----------|:--------------|
+| 1          | 6.96          |
+| 2          | 16.96         |
+
+**Explanation:**
+- Average selling price = Total Price of Product / Number of products sold.
+- Average selling price for product 1 = ((100 * 5) + (15 * 20)) / 115 = 6.96
+- Average selling price for product 2 = ((200 * 15) + (30 * 30)) / 230 = 16.96
+
+```sql
+SELECT p.product_id, IFNULL(
+        ROUND(SUM(p.price * u.units)/SUM(u.units), 2),
+        0) AS average_price
+    FROM Prices p
+    LEFT JOIN UnitsSold u
+    ON p.product_id = u.product_id
+    AND u.purchase_date >= p.start_date AND u.purchase_date <= p.end_date
+    GROUP BY p.product_id
+```
+
+## Problem 1264: Page Recommendations
+
+Table: `Friendship`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| user1_id      | int     |
+| user2_id      | int     |
+
+(`user1_id`, `user2_id`) is the primary key (combination of columns with unique values) for this table.
+Each row of this table indicates that there is a friendship relation between `user1_id` and `user2_id`.
+
+Table: `Likes`
+
+| Column Name | Type    |
+|:------------|:--------|
+| user_id     | int     |
+| page_id     | int     |
+
+(`user_id`, `page_id`) is the primary key (combination of columns with unique values) for this table.
+Each row of this table indicates that `user_id` likes `page_id`.
+
+Write a solution to recommend pages to the user with `user_id = 1` using the pages that your friends liked. It should not recommend pages you already liked.
+
+Return result table in any order without duplicates.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Friendship` table:
+
+| user1_id | user2_id |
+|:---------|:---------|
+| 1        | 2        |
+| 1        | 3        |
+| 1        | 4        |
+| 2        | 3        |
+| 2        | 4        |
+| 2        | 5        |
+| 6        | 1        |
+
+`Likes` table:
+
+| user_id | page_id |
+|:--------|:--------|
+| 1       | 88      |
+| 2       | 23      |
+| 3       | 24      |
+| 4       | 56      |
+| 5       | 11      |
+| 6       | 33      |
+| 2       | 77      |
+| 3       | 77      |
+| 6       | 88      |
+
+**Output:**
+
+| recommended_page |
+|:-----------------|
+| 23               |
+| 24               |
+| 56               |
+| 33               |
+| 77               |
+
+**Explanation:**
+User one is friend with users 2, 3, 4 and 6.
+Suggested pages are 23 from user 2, 24 from user 3, 56 from user 3 and 33 from user 6.
+Page 77 is suggested from both user 2 and user 3.
+Page 88 is not suggested because user 1 already likes it.
+
+```sql
+SELECT DISTINCT page_id recommended_page FROM Likes
+WHERE user_id IN (
+    SELECT 
+        CASE 
+            WHEN user1_id = 1 THEN user2_id 
+            WHEN user2_id=1 THEN user1_id
+        END AS user_id 
+        FROM Friendship WHERE user1_id = 1 OR user2_id = 1
+    )
+    AND page_id NOT IN (
+        SELECT page_id FROM Likes WHERE user_id = 1 
+    );
+```
+
+## Problem 1270: All People Report to the Given Manager
+
+Table: `Employees`
+
+| Column Name   | Type    |
+|:--------------|:--------|
+| employee_id   | int     |
+| employee_name | varchar |
+| manager_id    | int     |
+
+- `employee_id` is the column of unique values for this table.
+- Each row of this table indicates that the employee with ID `employee_id` and name `employee_name` reports his work to 
+  his/her direct manager with `manager_id`
+- The head of the company is the employee with `employee_id = 1`.
+
+Write a solution to find employee_id of all employees that **directly or indirectly** report their work to the head of 
+the company.
+
+The indirect relation between managers will not exceed three managers as the company is small.
+
+Return the result table in any order.
+
+The result format is in the following example.
+
+### Example 1:
+
+**Input:**
+`Employees` table:
+
+| employee_id | employee_name | manager_id |
+|:------------|:--------------|------------|
+| 1           | Boss          | 1          |
+| 3           | Alice         | 3          |
+| 2           | Bob           | 1          |
+| 4           | Daniel        | 2          |
+| 7           | Luis          | 4          |
+| 8           | Jhon          | 3          |
+| 9           | Angela        | 8          |
+| 77          | Robert        | 1          |
+
+**Output:**
+
+| employee_id |
+|:------------|
+| 2           |
+| 77          |
+| 4           |
+| 7           |
+
+**Explanation:**
+- The head of the company is the employee with employee_id 1.
+- The employees with employee_id 2 and 77 report their work directly to the head of the company.
+- The employee with employee_id 4 reports their work indirectly to the head of the company `4 --> 2 --> 1`.
+- The employee with employee_id 7 reports their work indirectly to the head of the company `7 --> 4 --> 2 --> 1`.
+- The employees with employee_id 3, 8, and 9 do not report their work to the head of the company directly or indirectly.
+
+```sql
+WITH RECURSIVE cte AS (
+    SELECT employee_id, manager_id
+    FROM Employees
+    WHERE manager_id = 1 AND employee_id != 1
+    UNION ALL
+    SELECT e.employee_id, e.manager_id
+    FROM Employees e
+    JOIN cte ON e.manager_id = cte.employee_id
+)
+SELECT employee_id
+FROM cte;
 ```
 
 ## Problem 1378: Replace Employee ID with The Unique Identifier

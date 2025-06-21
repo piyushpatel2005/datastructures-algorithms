@@ -422,10 +422,10 @@ Write an SQL query to report all customers who never order anything.
 Return the result table in any order.
 
 The query result format is in the following example.
-###Example 1:
+### Example 1:
 
 **Input:**
-Customers table:
+`Customers` table:
 
 | id | name  |
 |:---|:------|
@@ -434,14 +434,14 @@ Customers table:
 | 3  | Sam   |
 | 4  | Max   |
 
-Orders table:
+`Orders` table:
 
 | id | customerId |
 |:---|:-----------|
 | 1  | 3          |
 | 2  | 1          |
 
-Output:
+**Output:**
 
 | Customers |
 |-----------|
@@ -454,7 +454,9 @@ LEFT OUTER JOIN
 Orders o 
 ON c.id = o.customerId
 WHERE o.customerId IS NULL;
+```
 
+```sql
 select name as Customers from Customers where id not in (select customerId from Orders)
 ```
 
@@ -1111,37 +1113,38 @@ Write a solution to find the rows that contain the median `salary` of each compa
 | 14 | C        | 2645   |
 
 **Explanation:**
+The `Median` column is added only for understanding.
 For company A, the rows sorted are as follows:
 
-| id | company | salary  |
-|:---|:--------|:--------|
-| 3  | A       | 15      |
-| 2  | A       | 341     |
-| 5  | A       | 451     | <-- median
-| 6  | A       | 513     | <-- median
-| 1  | A       | 2341    |
-| 4  | A       | 15314   |
+| id | company | salary  | Median |
+|:---|:--------|:--------|:-------|
+| 3  | A       | 15      |        |
+| 2  | A       | 341     |        |
+| 5  | A       | 451     | <-- median |
+| 6  | A       | 513     | <-- median |
+| 1  | A       | 2341    |        |
+| 4  | A       | 15314   |        |
 
 For company B, the rows sorted are as follows:
 
-| id | company  | salary |
-|:---|:---------|:-------|
-| 8  | B        | 13     |
-| 7  | B        | 15     |
-| 12 | B        | 234    | <-- median
-| 11 | B        | 1221   | <-- median
-| 9  | B        | 1154   |
-| 10 | B        | 1345   |
+| id | company  | salary | Median |
+|:---|:---------|:-------|:-------|
+| 8  | B        | 13     |        |
+| 7  | B        | 15     |        |
+| 12 | B        | 234    | <-- median |
+| 11 | B        | 1221   | <-- median |
+| 9  | B        | 1154   |        |
+| 10 | B        | 1345   |        |
 
 For company C, the rows sorted are as follows:
 
-| id | company | salary  |
-|:---|:--------|:--------|
-| 17 | C       | 65      |
-| 13 | C       | 2345    |
-| 14 | C       | 2645    | <-- median
-| 15 | C       | 2645    |
-| 16 | C       | 2652    |
+| id | company | salary  | Median     |
+|:---|:--------|:--------|:-----------|
+| 17 | C       | 65      |            |
+| 13 | C       | 2345    |            |
+| 14 | C       | 2645    | <-- median |
+| 15 | C       | 2645    |            |
+| 16 | C       | 2652    |            |
 
 Follow up: Could you solve it without using any built-in or window functions?
 
@@ -1615,6 +1618,13 @@ Department d ON s.dept_id = d.dept_id
 ) SELECT dept_name, COUNT(student_id) student_number 
 FROM tmp GROUP BY dept_name 
 ORDER BY student_number DESC, dept_name ASC;
+
+SELECT d.dept_name, COUNT(s.student_id) AS student_number FROM 
+    Department d
+    LEFT OUTER JOIN Student s
+    ON d.dept_id = s.dept_id
+    GROUP BY d.dept_name
+    ORDER BY student_number DESC, dept_name;
 ```
 
 ## Problem 584: Find Customer Referee
@@ -1725,6 +1735,20 @@ WITH tmp AS (
     FROM Insurance
 ) SELECT ROUND(SUM(tiv_2016), 2) AS tiv_2016 FROM tmp 
 WHERE tiv_2015_count > 1 AND location_count = 1;
+
+SELECT ROUND(SUM(tiv_2016), 2) AS tiv_2016
+    FROM Insurance
+    WHERE tiv_2015 IN (
+        SELECT tiv_2015
+            FROM Insurance
+            GROUP BY tiv_2015
+            HAVING COUNT(1) > 1
+    ) AND (lat, lon) IN (
+        SELECT lat, lon
+            FROM Insurance
+            GROUP BY lat, lon
+            HAVING COUNT(1) = 1
+    );
 ```
 
 ## Problem 586: Customers Placing The Largest Number Of Orders
@@ -1749,7 +1773,7 @@ The query result format is in the following example.
 
 **Input:**
 
-Orders table:
+`Orders` table:
 
 | order_number | customer_number |
 |:-------------|:----------------|
@@ -1804,7 +1828,7 @@ The query result format is in the following example.
 ### Example 1:
 
 **Input:**
-World table:
+`World` table:
 
 | name        | continent | area    | population | gdp          |
 |------------|:----------|:---------|:------------|:--------------|
@@ -2404,10 +2428,10 @@ The result format is in the following example.
 
 ```sql
 SELECT 
-ROUND(MIN(SQRT((POW(p1.x - p2.x, 2) + POW(p1.y - p2.y, 2)))), 2) AS shortest 
-FROM Point2D p1
-JOIN Point2D p2
-ON p1.x != p2.x OR p1.y != p2.y;
+    ROUND(MIN(SQRT(POW(p1.x - p2.x, 2) + POW(p1.y - p2.y, 2))), 2) AS shortest
+    FROM Point2D p1
+    JOIN Point2D p2
+    ON p1.x != p2.x OR p1.y != p2.y;
 ```
 
 ## Problem 613: Shortest Distance in a Line
@@ -2865,7 +2889,7 @@ Note that you must write a single update statement, do not write any select stat
 
 The query result format is in the following example.
 
-###Example 1:
+### Example 1:
 
 **Input:**
 Salary table:
